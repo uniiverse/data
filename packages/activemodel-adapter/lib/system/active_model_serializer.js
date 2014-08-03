@@ -164,7 +164,7 @@ var ActiveModelSerializer = RESTSerializer.extend({
 
     if (belongsTo) {
       key = this.keyForAttribute(key);
-      json[key + "_type"] = capitalize(belongsTo.constructor.typeKey);
+      json[key + "_type"] = capitalize(get(belongsTo, 'typeKey'));
     }
   },
 
