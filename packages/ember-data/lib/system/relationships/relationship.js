@@ -32,6 +32,12 @@ Relationship.prototype = {
     }, this);
   },
 
+  reconnect: function(){
+    this.members.forEach(function(member) {
+      this.addRecordToInverse(member);
+    }, this);
+  },
+
   removeRecords: function(records){
     var that = this;
     records.forEach(function(record){
@@ -66,6 +72,12 @@ Relationship.prototype = {
       if (this.inverseKey) {
         this.removeRecordFromInverse(record);
       }
+    }
+  },
+
+  addRecordToInverse: function(record) {
+    if (this.inverseKey) {
+      record._relationships[this.inverseKey].addRecord(this.record);
     }
   },
 

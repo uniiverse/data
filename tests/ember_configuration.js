@@ -179,6 +179,9 @@
 
     DS.Relationship.prototype.addRecord = syncForTest(DS.Relationship.prototype.addRecord);
     DS.Relationship.prototype.removeRecord = syncForTest(DS.Relationship.prototype.removeRecord);
+    DS.Relationship.prototype.addRecordToInverse = syncForTest(DS.Relationship.prototype.addRecordToInverse);
+    DS.Relationship.prototype.removeRecordFromInverse = syncForTest(DS.Relationship.prototype.removeRecordFromInverse);
+
 
     var transforms = {
       'boolean': DS.BooleanTransform.create(),
