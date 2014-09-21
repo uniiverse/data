@@ -58,14 +58,6 @@ Relationship.prototype = {
     }
   },
 
-  pushRecords: function(records, idx) {
-    for (var i =0; i<records.length; i++) {
-      this._addRecord(Ember.A(records).objectAt(i));
-    }
-    this.notifyRecordRelationshipAdded(records, idx);
-    this.record.updateRecordArrays();
-  },
-
   //Just adds the record without notifying as a performance improvement
   _addRecord: function(record) {
     this.members.add(record);
@@ -148,7 +140,7 @@ ManyRelationship.prototype._addRecord = function(record) {
 };
 
 ManyRelationship.prototype.notifyRecordRelationshipAdded = function(record, idx) {
-  this.record.notifyHasManyAdded(this.key, record, idx);
+  this.record.notifyHasManyAdded(this.key, [record], idx);
 };
 
 ManyRelationship.prototype.notifyRecordRelationshipRemoved = function(record) {
@@ -167,6 +159,15 @@ ManyRelationship.prototype.reload = function() {
     });
   }
 };
+
+ManyRelationship.prototype.pushRecords = function(records, idx) {
+  for (var i =0; i<records.length; i++) {
+    this._addRecord(Ember.A(records).objectAt(i));
+  }
+  this.record.notifyHasManyAdded(this.key, records, idx);
+  this.record.updateRecordArrays();
+};
+
 
 ManyRelationship.prototype.computeChanges = function(records) {
   var members = this.members;
