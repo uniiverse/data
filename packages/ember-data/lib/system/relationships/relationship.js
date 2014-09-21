@@ -42,29 +42,40 @@ Relationship.prototype = {
     });
   },
 
-  addRecords: function(records, idx){
-    var that = this;
-    records.forEach(function(record){
-      that.addRecord(record, idx);
-      if (idx !== undefined) {
-        idx++;
-      }
+  addRecords: function(records, idx) {
+    var self = this;
+    var missingRecords = Ember.A(records).filter(function(record) {
+      return !self.members.has(record);
     });
+    this.pushRecords(missingRecords, idx);
   },
 
   addRecord: function(record, idx) {
     if (!this.members.has(record)) {
-      this.members.add(record);
+      this._addRecord(record);
       this.notifyRecordRelationshipAdded(record, idx);
-      if (this.inverseKey) {
-        record._relationships[this.inverseKey].addRecord(this.record);
-      } else {
-        if (!record._implicitRelationships[this.inverseKeyForimplicit]) {
-          record._implicitRelationships[this.inverseKeyForimplicit] = new Relationship(this.store, record, this.key,  {options:{}});
-        }
-        record._implicitRelationships[this.inverseKeyForimplicit].addRecord(this.record);
-      }
       this.record.updateRecordArrays();
+    }
+  },
+
+  pushRecords: function(records, idx) {
+    for (var i =0; i<records.length; i++) {
+      this._addRecord(Ember.A(records).objectAt(i));
+    }
+    this.notifyRecordRelationshipAdded(records, idx);
+    this.record.updateRecordArrays();
+  },
+
+  //Just adds the record without notifying as a performance improvement
+  _addRecord: function(record) {
+    this.members.add(record);
+    if (this.inverseKey) {
+      record._relationships[this.inverseKey].addRecord(this.record);
+    } else {
+      if (!record._implicitRelationships[this.inverseKeyForimplicit]) {
+        record._implicitRelationships[this.inverseKeyForimplicit] = new Relationship(this.store, record, this.key,  {options:{}});
+      }
+      record._implicitRelationships[this.inverseKeyForimplicit].addRecord(this.record);
     }
   },
 
@@ -129,8 +140,14 @@ ManyRelationship.prototype.destroy = function() {
   this.manyArray.destroy();
 };
 
-ManyRelationship.prototype.notifyRecordRelationshipAdded = function(record, idx) {
+ManyRelationship.prototype._super$_addRecord = Relationship.prototype._addRecord;
+
+ManyRelationship.prototype._addRecord = function(record) {
   Ember.assert("You cannot add '" + record.constructor.typeKey + "' records to this relationship (only '" + this.belongsToType.typeKey + "' allowed)", !this.belongsToType || record instanceof this.belongsToType);
+  this._super$_addRecord(record);
+};
+
+ManyRelationship.prototype.notifyRecordRelationshipAdded = function(record, idx) {
   this.record.notifyHasManyAdded(this.key, record, idx);
 };
 
@@ -163,14 +180,24 @@ ManyRelationship.prototype.computeChanges = function(records) {
   }, this);
 
   var hasManyArray = this.manyArray;
+  var arrayToFlush = [];
+  var originalIndex = 0;
+  var self = this;
 
   records.forEach(function(record, index) {
     //Need to preserve the order of incoming records
-    if (hasManyArray.objectAt(index) === record ) return;
+    if (hasManyArray.objectAt(index) === record ){
+      //Perf optimization to add records in as large batches as possible
+      self.pushRecords(arrayToFlush, originalIndex);
+      arrayToFlush = [];
+      originalIndex = index+1;
+      return;
+    }
 
     this.removeRecord(record);
-    this.addRecord(record, index);
+    arrayToFlush.push(record);
   }, this);
+  this.pushRecords(arrayToFlush, originalIndex);
 };
 
 ManyRelationship.prototype.fetchLink = function() {
